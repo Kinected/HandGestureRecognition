@@ -3,7 +3,7 @@ import time
 import cv2
 
 
-def close(capture):
+def close_camera(capture):
     capture.release()
     cv2.waitKey(1)
     cv2.destroyAllWindows()
@@ -18,7 +18,7 @@ def read_frame(capture, framerate=None):
 
     if not ret:
         print("Can't receive frame (stream end?). Exiting ...")
-        close(capture)
+        close_camera(capture)
         return None
 
     return frame
@@ -30,9 +30,6 @@ def get_close_event():
 
 def show_frame(frame, window_name="hand_gesture"):
     cv2.imshow(window_name, frame)
-
-
-import cv2
 
 
 def show_bindings(frame):

@@ -17,7 +17,7 @@ def compute_normalized_angle(vec1, vec2):
     return (angle + math.pi) / (2 * math.pi)
 
 
-def compute_distances_angles_from_wrist(landmarks) -> list:
+def compute_distances_angles_from_wrist(landmarks) -> np.ndarray:
     distances = []
     angles = []
 
@@ -50,4 +50,6 @@ def compute_distances_angles_from_wrist(landmarks) -> list:
 
         angles.append(compute_normalized_angle(vector, reference_vector))
 
-    return distances + angles
+    distances_and_angles = distances + angles
+
+    return np.array(distances_and_angles)
