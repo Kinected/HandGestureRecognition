@@ -28,6 +28,10 @@ def get_close_event():
     return cv2.waitKey(1) & 0xFF == ord("q")
 
 
+def get_key_pressed():
+    return cv2.waitKey(1) & 0xFF
+
+
 def show_frame(frame, window_name="hand_gesture"):
     cv2.imshow(window_name, frame)
 
@@ -56,3 +60,19 @@ def show_bindings(frame):
     )
 
     return frame
+
+
+def open_image(path):
+    image = cv2.imread(path)
+    return image
+
+
+def show_image(image):
+    cv2.imshow("Image", image)
+    cv2.waitKey(0)
+
+
+def close_image():
+    cv2.waitKey(2)
+    cv2.destroyAllWindows()
+    cv2.waitKey(2)

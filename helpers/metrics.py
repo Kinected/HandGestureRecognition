@@ -26,4 +26,4 @@ def append_metrics_csv(
 
 def get_number_of_epochs(log_path:str):
         metrics = pd.read_csv(log_path)
-        return = metrics.shape[0]
+        return metrics.shape[0]

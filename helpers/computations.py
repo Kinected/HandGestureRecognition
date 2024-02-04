@@ -17,39 +17,41 @@ def compute_normalized_angle(vec1, vec2):
     return (angle + math.pi) / (2 * math.pi)
 
 
-def compute_distances_angles_from_wrist(landmarks) -> np.ndarray:
+def compute_distances_angles_from_wrist(landmarks) -> list:
     distances = []
     angles = []
 
     MIDDLE_FINGER_MCP_INDEX = 8
 
-    wrist_landmarks = landmarks.pop(0)  # Get and remove wrist landmark
+    # copy landmarks to avoid modifying the original list
+    landmarks = list(landmarks)
+
+    wrist_landmarks = landmarks.pop(0)
     middle_finger_mcp_landmarks = landmarks[MIDDLE_FINGER_MCP_INDEX]
 
     reference_vector = (
-        wrist_landmarks.x - middle_finger_mcp_landmarks.x,
-        wrist_landmarks.y - middle_finger_mcp_landmarks.y,
-    )  # Vector from wrist to middle finger MCP
+        np.float32(wrist_landmarks.x - middle_finger_mcp_landmarks.x),
+        np.float32(wrist_landmarks.y - middle_finger_mcp_landmarks.y),
+    )
 
     for i, landmark in enumerate(landmarks):
         distances.append(
-            compute_distance(
-                landmark.x, wrist_landmarks.x, landmark.y, wrist_landmarks.y
+            np.float32(
+                compute_distance(
+                    landmark.x, wrist_landmarks.x, landmark.y, wrist_landmarks.y
+                )
             )
-        )  # Distance from wrist to landmark
+        )
 
         if i == MIDDLE_FINGER_MCP_INDEX:
             angles.append(0.0)  # Skip middle finger MCP
             continue
 
-        # compute angle between wrist-middle finger MCP vector and wrist-landmark vector
         vector = (
-            wrist_landmarks.x - landmark.x,
-            wrist_landmarks.y - landmark.y,
+            np.float32(wrist_landmarks.x - landmark.x),
+            np.float32(wrist_landmarks.y - landmark.y),
         )
 
-        angles.append(compute_normalized_angle(vector, reference_vector))
+        angles.append(np.float32(compute_normalized_angle(vector, reference_vector)))
 
-    distances_and_angles = distances + angles
-
-    return np.array(distances_and_angles)
+    return distances + angles

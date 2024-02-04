@@ -1,5 +1,4 @@
 import cv2
-import mediapipe as mp
 
 BOX_MARGIN = 24
 
@@ -61,7 +60,6 @@ def draw_box(frame, gesture, accuracy, hand, landmarks, box_margin=BOX_MARGIN):
 
 def get_landmarks(frame, holistics):
     frame.flags.writeable = False
-
     results = holistics.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
     frame.flags.writeable = True
 
