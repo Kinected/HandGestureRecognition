@@ -3,14 +3,34 @@ import math
 import numpy as np
 
 
+def compute_hand_coordinates(frame, landmarks) -> list[int]:
+    """
+    Compute the coordinates of the hand based on the landmarks
+    :param landmarks: hand landmarks from mediapipe
+    :return: coordinates [x, y] of hand
+    """
+
+    landmark = landmarks.landmark[9]
+    coordinates = [int(landmark.x * frame.shape[1]), int(landmark.y * frame.shape[0])]
+
+    return coordinates
+
+
 def compute_distance(x1: float, x2: float, y1: float, y2: float):
+    """
+    Compute the distance between two points
+    :param x1: x coordinate of the first point
+    :param x2: x coordinate of the second point
+    :param y1: y coordinate of the first point
+    :param y2: y coordinate of the second point
+    :return: distance between the two points
+    """
     return math.dist((x1, y1), (x2, y2))
 
 
 def compute_normalized_angle(vec1, vec2):
     dot = np.dot(vec1, vec2)
     det = np.cross(vec1, vec2)
-
     angle = math.atan2(det, dot)
 
     # Normalize angle between 0 and 1

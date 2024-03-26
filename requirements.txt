@@ -4,6 +4,8 @@ mediapipe
 scikit-learn
 matplotlib
 numpy
+websockets
+asyncio
 tensorflow
 joblib
 keyboard

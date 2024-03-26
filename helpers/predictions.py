@@ -12,7 +12,7 @@ def get_label(labels, predictions: list[float]):
     return labels[index]
 
 
-def get_gesture(model, labels: list[str], min_confidence: float, hand, landmarks):
+def get_gesture(model, labels: list[str], min_confidence: float, hand: list[int], landmarks):
     landmarks_distances_and_angles = compute_distances_angles_from_wrist(
         landmarks.landmark
     )

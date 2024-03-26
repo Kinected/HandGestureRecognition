@@ -62,6 +62,11 @@ def show_bindings(frame):
     return frame
 
 
+def draw_hand_pointer(frame, coordinates, color=(0, 255, 0)):
+    cv2.circle(frame, coordinates, 16, color, 2)
+    return frame
+
+
 def open_image(path):
     image = cv2.imread(path)
     return image
@@ -70,6 +75,20 @@ def open_image(path):
 def show_image(image):
     cv2.imshow("Image", image)
     cv2.waitKey(0)
+
+
+def frame_preprocessing(frame, resolution=None, flip=False):
+    if resolution is not None:
+        frame = cv2.resize(frame, resolution)
+
+    if flip:
+        frame = cv2.flip(frame, 1)
+
+    return frame
+
+
+def flip_frame(frame):
+    return cv2.flip(frame, 1)
 
 
 def close_image():

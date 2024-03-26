@@ -63,10 +63,10 @@ def get_landmarks(frame, holistics):
     results = holistics.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
     frame.flags.writeable = True
 
-    if results.left_hand_landmarks or results.right_hand_landmarks:
-        return [results.left_hand_landmarks, results.right_hand_landmarks]
-
-    return [None, None]
+    return {
+        "left": results.left_hand_landmarks or None,
+        "right": results.right_hand_landmarks or None,
+    }
 
 
 def draw_landmarks(frame, landmarks, holistics, drawing):
