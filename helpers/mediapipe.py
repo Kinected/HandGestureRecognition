@@ -3,11 +3,38 @@ import cv2
 BOX_MARGIN = 24
 
 
+def draw_hand_pointer(frame, coordinates, activated=False, listened=False):
+    color = (0, 255, 0)
+
+    if activated:
+        color = (255, 0, 0)
+
+    if listened:
+        color = (0, 0, 255)
+
+    frame = cv2.circle(
+        frame, (coordinates[0], coordinates[1]), 5, color, cv2.FILLED
+    )
+
+    return frame
+
+
+def draw_face_pointer(frame, coordinates):
+    frame = cv2.circle(
+        frame, (coordinates[0], coordinates[1]), 5, (0, 255, 0), cv2.FILLED
+    )
+
+    return frame
+
+
 def draw_box(frame, gesture, accuracy, hand, landmarks, box_margin=BOX_MARGIN):
     x_min = 10000
     x_max = 0
     y_min = 10000
     y_max = 0
+
+    if not landmarks:
+        return frame
 
     for landmark in landmarks.landmark:
         x = landmark.x * frame.shape[1]
@@ -46,7 +73,7 @@ def draw_box(frame, gesture, accuracy, hand, landmarks, box_margin=BOX_MARGIN):
 
     frame = cv2.putText(
         frame,
-        "left" if hand[0] == 1 else "right",
+        hand,
         (int(x_min), int(y_min - box_margin)),
         cv2.FONT_HERSHEY_PLAIN,
         2,
@@ -58,22 +85,23 @@ def draw_box(frame, gesture, accuracy, hand, landmarks, box_margin=BOX_MARGIN):
     return frame
 
 
-def get_landmarks(frame, holistics):
-    frame.flags.writeable = False
-    results = holistics.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-    frame.flags.writeable = True
-
-    return {
-        "left": results.left_hand_landmarks or None,
-        "right": results.right_hand_landmarks or None,
-    }
-
-
-def draw_landmarks(frame, landmarks, holistics, drawing):
+def draw_hand_landmarks(frame, landmarks, holistics, drawing):
     drawing.draw_landmarks(
         frame,
         landmarks,
         holistics.HAND_CONNECTIONS,
+        drawing.DrawingSpec(color=(0, 0, 255), thickness=2, circle_radius=4),
+        drawing.DrawingSpec(color=(0, 255, 0), thickness=4, circle_radius=2),
+    )
+
+    return frame
+
+
+def draw_face_landmarks(frame, landmarks, holistics, drawing):
+    drawing.draw_landmarks(
+        frame,
+        landmarks,
+        holistics.FACE_CONNECTIONS,
         drawing.DrawingSpec(color=(0, 0, 255), thickness=2, circle_radius=4),
         drawing.DrawingSpec(color=(0, 255, 0), thickness=4, circle_radius=2),
     )

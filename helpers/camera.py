@@ -62,11 +62,6 @@ def show_bindings(frame):
     return frame
 
 
-def draw_hand_pointer(frame, coordinates, color=(0, 255, 0)):
-    cv2.circle(frame, coordinates, 16, color, 2)
-    return frame
-
-
 def open_image(path):
     image = cv2.imread(path)
     return image

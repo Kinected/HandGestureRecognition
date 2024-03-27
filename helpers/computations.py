@@ -3,17 +3,7 @@ import math
 import numpy as np
 
 
-def compute_hand_coordinates(frame, landmarks) -> list[int]:
-    """
-    Compute the coordinates of the hand based on the landmarks
-    :param landmarks: hand landmarks from mediapipe
-    :return: coordinates [x, y] of hand
-    """
 
-    landmark = landmarks.landmark[9]
-    coordinates = [int(landmark.x * frame.shape[1]), int(landmark.y * frame.shape[0])]
-
-    return coordinates
 
 
 def compute_distance(x1: float, x2: float, y1: float, y2: float):
