@@ -10,7 +10,7 @@ from helpers.gesture_handler.coordinates import get_hand_coordinates, get_face_c
 from helpers.mediapipe import draw_face_pointer, draw_hand_pointer, draw_box
 from helpers.predictions import get_label
 
-MIN_GESTURE_CONFIDENCE = 0.7
+MIN_GESTURE_CONFIDENCE = 0.6
 LABELS = [
     "closed",
     "dislike",
@@ -21,6 +21,8 @@ LABELS = [
     "victory",
     "victory_inverted",
 ]
+
+LOSE_FOCUS_AFTER = 5
 
 
 def get_landmarks(frame, holistics):
@@ -71,6 +73,8 @@ class GestureHandler:
         "left_hand": None,
         "right_hand": None,
     }
+
+    no_interaction_since = None
 
     landmarks = {
         "left_hand": None,
@@ -259,6 +263,9 @@ class GestureHandler:
 
     def update_locked_coords(self):
 
+        if not self.hand_listened:
+            return
+
         if self.coordinates[self.hand_listened] == (0, 0):
             return
 
@@ -309,6 +316,18 @@ class GestureHandler:
 
         gesture, accuracy = self.get_gesture(hand, landmarks)
         self.update_gesture(gesture)
+
+        if not self.coords_locked and not self.no_interaction_since and self.current_gesture not in ["closed", "palm"]:
+            self.no_interaction_since = time.time()
+
+        if not self.coords_locked and not self.no_interaction_since and self.hand_listened and self.coordinates[
+            self.hand_listened] == (0, 0):
+            print("No interaction since")
+            self.no_interaction_since = time.time()
+
+        if self.no_interaction_since and time.time() - self.no_interaction_since > LOSE_FOCUS_AFTER:
+            self.hand_listened = None
+            self.no_interaction_since = None
 
         draw_box(frame, gesture, accuracy, hand, landmarks)
 
