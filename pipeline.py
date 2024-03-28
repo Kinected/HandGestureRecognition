@@ -34,7 +34,7 @@ SWIPE_THRESHOLD = 0.2
 
 # hand = [0, 1] if HAND_CONTROL == "right_hand" else [1, 0]
 
-uri = "ws://localhost:8765/"
+uri = "ws://localhost:8000/ws/swipes"
 
 capture = cv2.VideoCapture(1)
 
@@ -44,41 +44,6 @@ def handle_frame():
     frame = frame_preprocessing(frame, RESOLUTION, FLIP_CAMERA)
 
     return frame
-
-
-async def handle_hand_gesture(landmarks, frame, websocket):
-    hand_landmark = landmarks[HAND_CONTROL]
-
-    if hand_landmark:
-        if DEBUG: frame = draw_hand_landmarks(frame, hand_landmark, mp_holistic, mp_drawing)
-
-        # Get hand coordinates (not normalized)
-        hand_coordinates = get_hand_coordinates(frame, hand_landmark)
-
-        # Draw hand pointer
-        frame = draw_hand_pointer(frame, hand_coordinates)
-
-        # Get current gesture
-        gesture, accuracy = get_gesture(
-            model, labels, MIN_GESTURE_CONFIDENCE, hand, hand_landmark
-        )
-
-        # Draw box around hand
-        frame = draw_box(frame, gesture, accuracy, hand, hand_landmark)
-
-        # Handle gesture logic
-        current_swipe = gesture_handler.listen(frame, hand_coordinates, gesture)
-
-        if current_swipe:
-            print(current_swipe)
-            payload = {
-                "gesture": gesture,
-                "accuracy": float(accuracy),
-                "hand": hand,
-                "swipe": current_swipe,
-            }
-            gesture_handler.draw_swipe(frame, current_swipe)
-            await asyncio.create_task(send_gesture(websocket, payload))
 
 
 async def main():
