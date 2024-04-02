@@ -67,7 +67,6 @@ async def main():
                         listening_hand = gesture_handler.get_listening_hand(frame)
 
                         payload = {
-                            "is_listening": False,
                             "hand": None,
                             "coordinates": gesture_handler.coordinates,
                             "gesture": "no_gesture",
@@ -77,8 +76,9 @@ async def main():
                         if listening_hand:
                             swipe = gesture_handler.listen(frame, listening_hand)
 
+                            if swipe is not "none":
+                                print(swipe)
                             payload = {
-                                "is_listening": True,
                                 "hand": listening_hand,
                                 "coordinates": gesture_handler.coordinates,
                                 "gesture": gesture_handler.current_gesture,

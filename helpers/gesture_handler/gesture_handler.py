@@ -5,9 +5,11 @@ import numpy as np
 from tensorflow.keras.models import load_model
 
 from helpers.computations import compute_distances_angles_from_wrist
-from helpers.gesture_handler.coordinates import get_hand_coordinates, get_face_coordinates, \
+from helpers.gesture_handler.activation_area import get_activation_area
+from helpers.gesture_handler.coordinates import get_face_coordinates, get_hand_coordinates, \
     is_hand_in_area_of_activation
-from helpers.mediapipe import draw_face_pointer, draw_hand_pointer, draw_box
+from helpers.gesture_handler.landmarks import get_landmarks
+from helpers.mediapipe import draw_box, draw_face_pointer, draw_hand_pointer
 from helpers.predictions import get_label
 
 MIN_GESTURE_CONFIDENCE = 0.5
@@ -21,37 +23,6 @@ LABELS = [
 ]
 
 LOSE_FOCUS_AFTER = 2
-
-
-def get_landmarks(frame, holistics):
-    frame.flags.writeable = False
-    results = holistics.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-    frame.flags.writeable = True
-
-    return {
-        "face": results.face_landmarks or None,
-        "left_hand": results.left_hand_landmarks or None,
-        "right_hand": results.right_hand_landmarks or None,
-    }
-
-
-def get_activation_area(frame, face_coords):
-    activation_area = (
-        face_coords[0] - 400,
-        face_coords[1] - 120,
-        face_coords[0] + 400,
-        face_coords[1] + 120,
-    )
-
-    cv2.rectangle(
-        frame,
-        (activation_area[0], activation_area[1]),
-        (activation_area[2], activation_area[3]),
-        (255, 0, 0),
-        2,
-    )
-
-    return activation_area
 
 
 class GestureHandler:
@@ -148,21 +119,20 @@ class GestureHandler:
 
         return gesture, accuracy
 
-    def draw_pointers(self, frame):
+    def draw_pointers(self, frame, activation_area=None):
         for key, coords in self.coordinates.items():
             if key == "face":
                 draw_face_pointer(frame, coords)
             else:
                 is_listened = key == self.hand_listened
-                activated = is_hand_in_area_of_activation(coords, get_activation_area(frame, self.coordinates["face"]))
+                activated = is_hand_in_area_of_activation(coords, activation_area)
                 draw_hand_pointer(frame, coords, activated, is_listened)
 
     def get_listening_hand(self, frame):
 
-        self.draw_pointers(frame)
-
         # Compute the area of activation from nose coordinates
         activation_area = get_activation_area(frame, self.coordinates["face"])
+        self.draw_pointers(frame, activation_area)
 
         # check if each hand is in the area of activation
         in_activation_area = {
@@ -248,11 +218,9 @@ class GestureHandler:
     def handle_locking(self):
 
         if self.current_gesture == "closed" and not self.coords_locked:
-            print("Locking...")
             self.coords_locked = True
 
         if self.current_gesture == "palm" and self.coords_locked:
-            print("Unlocking...")
             self.coords_locked = False
             self.locked_control_coords = [
                 (0, 0),
@@ -261,10 +229,7 @@ class GestureHandler:
 
     def update_locked_coords(self):
 
-        if not self.hand_listened:
-            return
-
-        if self.coordinates[self.hand_listened] == (0, 0):
+        if not self.hand_listened or self.coordinates[self.hand_listened] == (0, 0):
             return
 
         if self.coords_locked:
@@ -302,6 +267,27 @@ class GestureHandler:
 
         return frame
 
+    def update_no_interaction_since(self):
+
+        if self.current_gesture in ["closed", "palm"]:
+            self.no_interaction_since = None
+            return
+
+        if not self.no_interaction_since:
+            if not self.coords_locked:
+                self.no_interaction_since = time.time()
+
+            if self.hand_listened and self.coordinates[self.hand_listened] == (0, 0):
+                self.no_interaction_since = time.time()
+
+            return
+
+        time_without_interaction = time.time() - self.no_interaction_since
+
+        if time_without_interaction > LOSE_FOCUS_AFTER:
+            self.hand_listened = None
+            self.no_interaction_since = None
+
     def listen(self, frame, hand: str):
         """
         Listen to the gesture and coordinates and handle the lock/unlock
@@ -313,19 +299,9 @@ class GestureHandler:
         landmarks = get_landmarks(frame, self.holistic_model)[hand]
 
         gesture, accuracy = self.get_gesture(hand, landmarks)
+
         self.update_gesture(gesture)
-
-        if not self.coords_locked and not self.no_interaction_since and self.current_gesture not in ["closed", "palm"]:
-            self.no_interaction_since = time.time()
-
-        if not self.coords_locked and not self.no_interaction_since and self.hand_listened and (0, 0) == \
-                self.coordinates[self.hand_listened]:
-            print("No interaction since")
-            self.no_interaction_since = time.time()
-
-        if not self.coords_locked and self.no_interaction_since and time.time() - self.no_interaction_since > LOSE_FOCUS_AFTER:
-            self.hand_listened = None
-            self.no_interaction_since = None
+        self.update_no_interaction_since()
 
         draw_box(frame, gesture, accuracy, hand, landmarks)
 
