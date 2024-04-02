@@ -10,11 +10,9 @@ from helpers.gesture_handler.coordinates import get_hand_coordinates, get_face_c
 from helpers.mediapipe import draw_face_pointer, draw_hand_pointer, draw_box
 from helpers.predictions import get_label
 
-MIN_GESTURE_CONFIDENCE = 0.6
+MIN_GESTURE_CONFIDENCE = 0.5
 LABELS = [
     "closed",
-    "dislike",
-    "like",
     "palm",
     "point_up",
     "rock",
@@ -22,7 +20,7 @@ LABELS = [
     "victory_inverted",
 ]
 
-LOSE_FOCUS_AFTER = 5
+LOSE_FOCUS_AFTER = 2
 
 
 def get_landmarks(frame, holistics):
@@ -39,10 +37,10 @@ def get_landmarks(frame, holistics):
 
 def get_activation_area(frame, face_coords):
     activation_area = (
-        face_coords[0] - 320,
-        face_coords[1] - 80,
-        face_coords[0] + 320,
-        face_coords[1] + 80,
+        face_coords[0] - 400,
+        face_coords[1] - 120,
+        face_coords[0] + 400,
+        face_coords[1] + 120,
     )
 
     cv2.rectangle(
@@ -320,12 +318,12 @@ class GestureHandler:
         if not self.coords_locked and not self.no_interaction_since and self.current_gesture not in ["closed", "palm"]:
             self.no_interaction_since = time.time()
 
-        if not self.coords_locked and not self.no_interaction_since and self.hand_listened and self.coordinates[
-            self.hand_listened] == (0, 0):
+        if not self.coords_locked and not self.no_interaction_since and self.hand_listened and (0, 0) == \
+                self.coordinates[self.hand_listened]:
             print("No interaction since")
             self.no_interaction_since = time.time()
 
-        if self.no_interaction_since and time.time() - self.no_interaction_since > LOSE_FOCUS_AFTER:
+        if not self.coords_locked and self.no_interaction_since and time.time() - self.no_interaction_since > LOSE_FOCUS_AFTER:
             self.hand_listened = None
             self.no_interaction_since = None
 

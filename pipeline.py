@@ -1,19 +1,18 @@
-import cv2
 import asyncio
+
+import cv2
 import mediapipe as mp
 import websockets
 from websockets.exceptions import ConnectionClosed
-from helpers.websockets.send_gesture import send_gesture
+
+from helpers.camera import close_camera, flip_frame, frame_preprocessing, get_close_event, read_frame, show_frame
 from helpers.gesture_handler.gesture_handler import GestureHandler
-from helpers.predictions import get_gesture
-from helpers.mediapipe import draw_hand_landmarks, draw_face_landmarks, draw_box
-from helpers.camera import read_frame, show_frame, get_close_event, close_camera, flip_frame, \
-    frame_preprocessing
+from helpers.websockets.send_gesture import send_gesture
 
 MIN_DETECTION_CONFIDENCE = 0.4
 MIN_PRESENCE_CONFIDENCE = 0.4
 NUM_HANDS = 1
-MIN_TRACKING_CONFIDENCE = 0.3
+MIN_TRACKING_CONFIDENCE = 0.2
 
 mp_holistic = mp.solutions.holistic
 mp_drawing = mp.solutions.drawing_utils
@@ -25,12 +24,12 @@ FRAMERATE = None
 RESOLUTION = (833, 480)  # (1280, 720)
 FLIP_CAMERA = False
 
-MODEL_NAME = "4_feb_w_additional_datasets"
-MODEL_PATH = f"./models/{MODEL_NAME}/{MODEL_NAME}.hdf5"
+MODEL_NAME = "March28"
+MODEL_PATH = f"./models/{MODEL_NAME}/{MODEL_NAME}.keras"
 
 MP_MODEL_COMPLEXITY = 0
 
-SWIPE_THRESHOLD = 0.2
+SWIPE_THRESHOLD = 0.1
 
 # hand = [0, 1] if HAND_CONTROL == "right_hand" else [1, 0]
 
@@ -67,18 +66,26 @@ async def main():
                         gesture_handler.handle_frame(frame)
                         listening_hand = gesture_handler.get_listening_hand(frame)
 
+                        payload = {
+                            "is_listening": False,
+                            "hand": None,
+                            "coordinates": gesture_handler.coordinates,
+                            "gesture": "no_gesture",
+                            "swipe": None,
+                        }
+
                         if listening_hand:
                             swipe = gesture_handler.listen(frame, listening_hand)
 
                             payload = {
+                                "is_listening": True,
                                 "hand": listening_hand,
                                 "coordinates": gesture_handler.coordinates,
                                 "gesture": gesture_handler.current_gesture,
                                 "swipe": swipe,
                             }
 
-                            await send_gesture(websocket, payload)
-
+                        await send_gesture(websocket, payload)
                         frame = flip_frame(frame)
                         # Display swipe on frame
                         show_frame(frame, "hand gesture recognition")
