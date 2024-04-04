@@ -22,7 +22,7 @@ BOX_MARGIN = 24
 DEBUG = False
 FRAMERATE = None
 RESOLUTION = (833, 480)  # (1280, 720)
-FLIP_CAMERA = False
+FLIP_CAMERA = True
 
 MODEL_NAME = "March28"
 MODEL_PATH = f"./models/{MODEL_NAME}/{MODEL_NAME}.keras"
@@ -35,7 +35,7 @@ SWIPE_THRESHOLD = 0.1
 
 uri = "ws://localhost:8000/ws/swipes"
 
-capture = cv2.VideoCapture(1)
+capture = cv2.VideoCapture(0)
 
 
 def handle_frame():
@@ -76,8 +76,6 @@ async def main():
                         if listening_hand:
                             swipe = gesture_handler.listen(frame, listening_hand)
 
-                            if swipe is not "none":
-                                print(swipe)
                             payload = {
                                 "hand": listening_hand,
                                 "coordinates": gesture_handler.coordinates,
@@ -86,7 +84,7 @@ async def main():
                             }
 
                         await send_gesture(websocket, payload)
-                        frame = flip_frame(frame)
+                        # frame = flip_frame(frame)
                         # Display swipe on frame
                         show_frame(frame, "hand gesture recognition")
 
