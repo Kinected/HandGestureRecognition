@@ -192,10 +192,10 @@ class GestureHandler:
         elif deltaY > self.delta_threshold:
             vertical_swipe_direction = -1
 
-        if deltaX > self.delta_threshold:
+        if deltaX < -self.delta_threshold:
             horizontal_swipe_direction = 1
 
-        elif deltaX < -self.delta_threshold:
+        elif deltaX > self.delta_threshold:
             horizontal_swipe_direction = -1
 
         swipe_directions = {

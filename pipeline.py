@@ -5,7 +5,7 @@ import mediapipe as mp
 import websockets
 from websockets.exceptions import ConnectionClosed
 
-from helpers.camera import close_camera, flip_frame, frame_preprocessing, get_close_event, read_frame, show_frame
+from helpers.camera import close_camera, frame_preprocessing, get_close_event, read_frame, show_frame
 from helpers.gesture_handler.gesture_handler import GestureHandler
 from helpers.websockets.send_gesture import send_gesture
 
@@ -21,8 +21,8 @@ BOX_MARGIN = 24
 
 DEBUG = False
 FRAMERATE = None
-RESOLUTION = (833, 480)  # (1280, 720)
-FLIP_CAMERA = True
+
+FLIP_CAMERA = False
 
 MODEL_NAME = "March28"
 MODEL_PATH = f"./models/{MODEL_NAME}/{MODEL_NAME}.keras"
@@ -37,10 +37,14 @@ uri = "ws://localhost:8000/ws/swipes"
 
 capture = cv2.VideoCapture(0)
 
+RESOLUTION = (capture.get(cv2.CAP_PROP_FRAME_WIDTH), capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+
+# RESOLUTION = (833, 480)  # (1280, 720)
 
 def handle_frame():
     frame = read_frame(capture, FRAMERATE)
-    frame = frame_preprocessing(frame, RESOLUTION, FLIP_CAMERA)
+    frame = frame_preprocessing(frame, None, FLIP_CAMERA)
 
     return frame
 
