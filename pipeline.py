@@ -37,14 +37,17 @@ uri = "ws://localhost:8000/ws/swipes"
 
 capture = cv2.VideoCapture(0)
 
-RESOLUTION = (capture.get(cv2.CAP_PROP_FRAME_WIDTH), capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+# RESOLUTION = (capture.get(cv2.CAP_PROP_FRAME_WIDTH), capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
+RESIZE_TO = (800, 800)
+RESOLUTION = (800, 800)  # (1280, 720)
 
-# RESOLUTION = (833, 480)  # (1280, 720)
 
 def handle_frame():
+
     frame = read_frame(capture, FRAMERATE)
-    frame = frame_preprocessing(frame, None, FLIP_CAMERA)
+    if frame.any():
+        frame = frame_preprocessing(frame, RESIZE_TO, RESOLUTION, FLIP_CAMERA)
 
     return frame
 
@@ -74,6 +77,7 @@ async def main():
                             "hand": None,
                             "coordinates": gesture_handler.coordinates,
                             "gesture": "no_gesture",
+                            "deltas": {"x": 0, "y": 0},
                             "swipe": None,
                         }
 
@@ -84,6 +88,7 @@ async def main():
                                 "hand": listening_hand,
                                 "coordinates": gesture_handler.coordinates,
                                 "gesture": gesture_handler.current_gesture,
+                                "deltas": gesture_handler.deltas,
                                 "swipe": swipe,
                             }
 

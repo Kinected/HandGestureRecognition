@@ -22,7 +22,7 @@ LABELS = [
     "victory_inverted",
 ]
 
-LOSE_FOCUS_AFTER = 2
+LOSE_FOCUS_AFTER_SECONDS = 2
 
 
 class GestureHandler:
@@ -55,6 +55,11 @@ class GestureHandler:
         "left_hand": (0, 0),
         "right_hand": (0, 0),
         "face": (0, 0),
+    }
+    deltas = {
+        "x": 0,
+        "y": 0
+
     }
     coords_locked = False
     locked_control_coords = [
@@ -177,11 +182,21 @@ class GestureHandler:
 
     def get_swipe(self):
 
+        self.deltas = {
+            "x": 0,
+            "y": 0
+        }
+
         if self.locked_control_coords[0] == (0, 0) or self.locked_control_coords[1] == (0, 0):
             return "none"
 
         deltaX = self.locked_control_coords[1][0] - self.locked_control_coords[0][0]
         deltaY = self.locked_control_coords[1][1] - self.locked_control_coords[0][1]
+
+        self.deltas = {
+            "x": deltaX,
+            "y": deltaY
+        }
 
         vertical_swipe_direction = 0
         horizontal_swipe_direction = 0
@@ -216,7 +231,6 @@ class GestureHandler:
         self.current_gesture = gesture
 
     def handle_locking(self):
-
         if self.current_gesture == "closed" and not self.coords_locked:
             self.coords_locked = True
 
@@ -228,7 +242,6 @@ class GestureHandler:
             ]
 
     def update_locked_coords(self):
-
         if not self.hand_listened or self.coordinates[self.hand_listened] == (0, 0):
             return
 
@@ -268,7 +281,6 @@ class GestureHandler:
         return frame
 
     def update_no_interaction_since(self):
-
         if self.current_gesture in ["closed", "palm"]:
             self.no_interaction_since = None
             return
@@ -284,7 +296,7 @@ class GestureHandler:
 
         time_without_interaction = time.time() - self.no_interaction_since
 
-        if time_without_interaction > LOSE_FOCUS_AFTER:
+        if time_without_interaction > LOSE_FOCUS_AFTER_SECONDS:
             self.hand_listened = None
             self.no_interaction_since = None
 
