@@ -1,7 +1,6 @@
 import time
 from enum import Enum
 
-from helpers.gesture_handler.gesture_handler import GestureHandler
 
 
 class States(Enum):
@@ -13,7 +12,7 @@ class States(Enum):
     CLICK = 6
 
 
-class ClickHandler(GestureHandler):
+class ClickHandler:
     current_state = States.PENDING
     previous_state = None
     state_since = None
@@ -21,9 +20,6 @@ class ClickHandler(GestureHandler):
     current_gesture = None
     previous_gesture = None
 
-    def __init__(self):
-        super().__init__()
-        pass
 
     def handle_step(self, current_gesture):
         """

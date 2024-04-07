@@ -29,22 +29,21 @@ MODEL_PATH = f"./models/{MODEL_NAME}/{MODEL_NAME}.keras"
 
 MP_MODEL_COMPLEXITY = 0
 
-SWIPE_THRESHOLD = 0.1
+SWIPE_SENSITIVITY = {"x": 0.1, "y": 0.2}
 
 # hand = [0, 1] if HAND_CONTROL == "right_hand" else [1, 0]
 
 uri = "ws://localhost:8000/ws/swipes"
 
-capture = cv2.VideoCapture(0)
+capture = cv2.VideoCapture(1)
 
 # RESOLUTION = (capture.get(cv2.CAP_PROP_FRAME_WIDTH), capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-RESIZE_TO = (800, 800)
-RESOLUTION = (800, 800)  # (1280, 720)
+RESIZE_TO = (1000, 1000)  # (800, 800)
+RESOLUTION = (1000, 1000)  # (800, 800)  # (1280, 720)
 
 
 def handle_frame():
-
     frame = read_frame(capture, FRAMERATE)
     if frame.any():
         frame = frame_preprocessing(frame, RESIZE_TO, RESOLUTION, FLIP_CAMERA)
@@ -62,7 +61,7 @@ async def main():
         gesture_handler = GestureHandler(frame_resolution=RESOLUTION,
                                          holistic_model=holistic,
                                          gesture_model_path=MODEL_PATH,
-                                         swipe_threshold=SWIPE_THRESHOLD)
+                                         swipe_sensitivity=SWIPE_SENSITIVITY)
 
         while True:
             try:
@@ -78,18 +77,18 @@ async def main():
                             "coordinates": gesture_handler.coordinates,
                             "gesture": "no_gesture",
                             "deltas": {"x": 0, "y": 0},
-                            "swipe": None,
+                            "action": None,
                         }
 
                         if listening_hand:
-                            swipe = gesture_handler.listen(frame, listening_hand)
+                            action = gesture_handler.listen(frame, listening_hand)
 
                             payload = {
                                 "hand": listening_hand,
                                 "coordinates": gesture_handler.coordinates,
                                 "gesture": gesture_handler.current_gesture,
-                                "deltas": gesture_handler.deltas,
-                                "swipe": swipe,
+                                "deltas": 0,  # gesture_handler.deltas,
+                                "action": action,
                             }
 
                         await send_gesture(websocket, payload)
@@ -102,6 +101,7 @@ async def main():
 
             except ConnectionClosed:
                 print("Connection lost. Reconnecting...")
+                await asyncio.sleep(2)
                 continue
 
             finally:

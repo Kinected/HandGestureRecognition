@@ -1,14 +1,15 @@
 import time
 
-import cv2
 import numpy as np
 from tensorflow.keras.models import load_model
 
 from helpers.computations import compute_distances_angles_from_wrist
 from helpers.gesture_handler.activation_area import get_activation_area
+from helpers.gesture_handler.click_handler import ClickHandler
 from helpers.gesture_handler.coordinates import get_face_coordinates, get_hand_coordinates, \
     is_hand_in_area_of_activation
 from helpers.gesture_handler.landmarks import get_landmarks
+from helpers.gesture_handler.swipe_handler import SwipeHandler
 from helpers.mediapipe import draw_box, draw_face_pointer, draw_hand_pointer
 from helpers.predictions import get_label
 
@@ -26,8 +27,9 @@ LOSE_FOCUS_AFTER_SECONDS = 2
 
 
 class GestureHandler:
-    current_swipe = None
-    last_swipe = None
+    swipe_handler = None
+    click_handler = None
+
     current_gesture = None
     last_gesture = None
 
@@ -56,18 +58,9 @@ class GestureHandler:
         "right_hand": (0, 0),
         "face": (0, 0),
     }
-    deltas = {
-        "x": 0,
-        "y": 0
 
-    }
-    coords_locked = False
-    locked_control_coords = [
-        (0, 0),
-        (0, 0),
-    ]
-
-    def __init__(self, frame_resolution: tuple[int, int], holistic_model, gesture_model_path, swipe_threshold=0.25):
+    def __init__(self, frame_resolution: tuple[int, int], holistic_model, gesture_model_path,
+                 swipe_sensitivity={"x": 0.25, "y": 0.25}):
 
         self.frame_resolution = frame_resolution
 
@@ -76,7 +69,8 @@ class GestureHandler:
 
         self.start_time = None
 
-        self.delta_threshold = swipe_threshold * frame_resolution[1]
+        self.swipe_handler = SwipeHandler(frame_resolution, swipe_sensitivity)
+        self.click_handler = ClickHandler()
 
     def handle_frame(self, frame):
         """
@@ -86,7 +80,6 @@ class GestureHandler:
         """
         self.landmarks = get_landmarks(frame, self.holistic_model)
         self.compute_coordinates()
-
         return
 
     def compute_coordinates(self):
@@ -180,105 +173,9 @@ class GestureHandler:
 
         return self.hand_listened
 
-    def get_swipe(self):
-
-        self.deltas = {
-            "x": 0,
-            "y": 0
-        }
-
-        if self.locked_control_coords[0] == (0, 0) or self.locked_control_coords[1] == (0, 0):
-            return "none"
-
-        deltaX = self.locked_control_coords[1][0] - self.locked_control_coords[0][0]
-        deltaY = self.locked_control_coords[1][1] - self.locked_control_coords[0][1]
-
-        self.deltas = {
-            "x": deltaX,
-            "y": deltaY
-        }
-
-        vertical_swipe_direction = 0
-        horizontal_swipe_direction = 0
-
-        if deltaY < -self.delta_threshold:
-            vertical_swipe_direction = 1
-
-        elif deltaY > self.delta_threshold:
-            vertical_swipe_direction = -1
-
-        if deltaX < -self.delta_threshold:
-            horizontal_swipe_direction = 1
-
-        elif deltaX > self.delta_threshold:
-            horizontal_swipe_direction = -1
-
-        swipe_directions = {
-            (1, 0): "up",
-            (-1, 0): "down",
-            (0, 1): "right",
-            (0, -1): "left",
-            (1, 1): "up-right",
-            (1, -1): "up-left",
-            (-1, 1): "down-right",
-            (-1, -1): "down-left",
-        }
-
-        return swipe_directions.get((vertical_swipe_direction, horizontal_swipe_direction), "none")
-
     def update_gesture(self, gesture):
         self.last_gesture = self.current_gesture
         self.current_gesture = gesture
-
-    def handle_locking(self):
-        if self.current_gesture == "closed" and not self.coords_locked:
-            self.coords_locked = True
-
-        if self.current_gesture == "palm" and self.coords_locked:
-            self.coords_locked = False
-            self.locked_control_coords = [
-                (0, 0),
-                (0, 0),
-            ]
-
-    def update_locked_coords(self):
-        if not self.hand_listened or self.coordinates[self.hand_listened] == (0, 0):
-            return
-
-        if self.coords_locked:
-            self.locked_control_coords[1] = self.coordinates[self.hand_listened]
-            return
-
-        self.locked_control_coords[0] = self.coordinates[self.hand_listened]
-
-    def draw_gesture(self, frame):
-        """
-        Draw the line between the two points
-        :param frame:
-        :return: frame with the line drawn
-        """
-
-        frame = cv2.putText(
-            frame,
-            self.current_swipe,
-            (10, 30),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.5,
-            (255, 0, 0),
-            2,
-            cv2.LINE_AA,
-        )
-
-        if self.coords_locked:
-            frame = cv2.line(
-                frame,
-                self.locked_control_coords[0],
-                self.locked_control_coords[1],
-                (255, 0, 0),
-                2,
-            )
-
-        return frame
 
     def update_no_interaction_since(self):
         if self.current_gesture in ["closed", "palm"]:
@@ -286,7 +183,7 @@ class GestureHandler:
             return
 
         if not self.no_interaction_since:
-            if not self.coords_locked:
+            if not self.swipe_handler.coords_locked:
                 self.no_interaction_since = time.time()
 
             if self.hand_listened and self.coordinates[self.hand_listened] == (0, 0):
@@ -304,28 +201,27 @@ class GestureHandler:
         """
         Listen to the gesture and coordinates and handle the lock/unlock
         :param frame: OpenCV frame
-        :param hand: the hand to listen to
-        :return:
+        :param hand: the hand currently watched
+        :return: last swipe
         """
 
-        landmarks = get_landmarks(frame, self.holistic_model)[hand]
-
+        landmarks = self.landmarks[hand]
         gesture, accuracy = self.get_gesture(hand, landmarks)
 
         self.update_gesture(gesture)
-        self.update_no_interaction_since()
 
         draw_box(frame, gesture, accuracy, hand, landmarks)
 
-        self.handle_locking()
-        self.update_locked_coords()
+        coords_locked = self.swipe_handler.handle_locking(gesture)
+        self.update_no_interaction_since()
+        self.swipe_handler.update_locked_coords(self.coordinates, hand)
 
-        self.last_swipe = self.current_swipe
-        self.current_swipe = self.get_swipe()
+        last_swipe = self.swipe_handler.current_swipe
+        current_swipe = self.swipe_handler.get_current_swipe()
 
-        self.draw_gesture(frame)
+        self.swipe_handler.draw(frame)
 
-        if self.coords_locked:
-            return "hover_" + self.current_swipe
+        if coords_locked:
+            return "hover_" + current_swipe
 
-        return self.last_swipe
+        return last_swipe
