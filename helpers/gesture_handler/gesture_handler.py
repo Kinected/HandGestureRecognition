@@ -30,8 +30,9 @@ class GestureHandler:
     swipe_handler = None
     click_handler = None
 
+    current_action = None
+
     current_gesture = None
-    last_gesture = None
 
     is_listening_for_swipe = False
     hand_listened = None
@@ -62,6 +63,7 @@ class GestureHandler:
     def __init__(self, frame_resolution: tuple[int, int], holistic_model, gesture_model_path,
                  swipe_sensitivity={"x": 0.25, "y": 0.25}):
 
+        self.current_action = None
         self.frame_resolution = frame_resolution
 
         self.gesture_model = load_model(gesture_model_path, compile=False)
@@ -127,6 +129,11 @@ class GestureHandler:
                 draw_hand_pointer(frame, coords, activated, is_listened)
 
     def get_listening_hand(self, frame):
+        """
+        Get the listening hand in activation area
+        :param frame: OpenCV Frame
+        :return:
+        """
 
         # Compute the area of activation from nose coordinates
         activation_area = get_activation_area(frame, self.coordinates["face"])
@@ -173,10 +180,6 @@ class GestureHandler:
 
         return self.hand_listened
 
-    def update_gesture(self, gesture):
-        self.last_gesture = self.current_gesture
-        self.current_gesture = gesture
-
     def update_no_interaction_since(self):
         if self.current_gesture in ["closed", "palm"]:
             self.no_interaction_since = None
@@ -197,31 +200,47 @@ class GestureHandler:
             self.hand_listened = None
             self.no_interaction_since = None
 
+            # To avoid having the last gesture remaining at the last swipe seen
+            self.swipe_handler.locked_control_coords = [
+                (0, 0),
+                (0, 0)
+            ]
+
     def listen(self, frame, hand: str):
         """
-        Listen to the gesture and coordinates and handle the lock/unlock
+        Gets actions from user based on their gestures and swipes
         :param frame: OpenCV frame
         :param hand: the hand currently watched
-        :return: last swipe
+        :return: action of the user
         """
 
         landmarks = self.landmarks[hand]
         gesture, accuracy = self.get_gesture(hand, landmarks)
 
-        self.update_gesture(gesture)
+        self.current_gesture = gesture
 
         draw_box(frame, gesture, accuracy, hand, landmarks)
 
         coords_locked = self.swipe_handler.handle_locking(gesture)
         self.update_no_interaction_since()
+
         self.swipe_handler.update_locked_coords(self.coordinates, hand)
 
-        last_swipe = self.swipe_handler.current_swipe
-        current_swipe = self.swipe_handler.get_current_swipe()
+        self.click_handler.handle_step(gesture)
 
-        self.swipe_handler.draw(frame)
+        last_swipe = self.swipe_handler.current_swipe
+        self.current_action = self.swipe_handler.get_current_swipe()
+
+        is_clicking = self.click_handler.is_clicking()
+
+        if is_clicking:
+            return "click"
 
         if coords_locked:
-            return "hover_" + current_swipe
+            self.swipe_handler.draw(frame)
+            return "hover_" + self.current_action
 
+        # We return the last swipe to be able to catch validated swipes:
+        # If the last gesture was "hover_up-left" and the user open his hand, the current gesture will be "none",
+        # not the validated "up-left". We keep the last_swipe in a variable to keep it
         return last_swipe

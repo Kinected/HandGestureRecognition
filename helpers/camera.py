@@ -11,15 +11,10 @@ def close_camera(capture):
 
 
 def read_frame(capture, framerate=None):
-    ret, frame = capture.read()
-
     if framerate is not None:
         time.sleep(1 / framerate)
 
-    if not ret:
-        print("Can't receive frame (stream end?). Exiting ...")
-        close_camera(capture)
-        return None
+    ret, frame = capture.read()
 
     return frame
 
@@ -82,8 +77,7 @@ def frame_preprocessing(frame, resize_to=None, resolution=None, flip=False):
         frame = frame[offset_y:offset_y + resize_to[1], offset_x:offset_x + resize_to[0]]
 
     if resolution is not None:
-        frame = frame
-        # frame = cv2.resize(frame, resolution)
+        frame = cv2.resize(frame, resolution)
 
     if flip:
         frame = cv2.flip(frame, 1)

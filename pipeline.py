@@ -3,11 +3,10 @@ import asyncio
 import cv2
 import mediapipe as mp
 import websockets
-from websockets.exceptions import ConnectionClosed
 
-from helpers.camera import close_camera, frame_preprocessing, get_close_event, read_frame, show_frame
+from helpers.camera import close_camera, flip_frame, frame_preprocessing, get_close_event, read_frame, show_frame
 from helpers.gesture_handler.gesture_handler import GestureHandler
-from helpers.websockets.send_gesture import send_gesture
+from helpers.websockets.websockets import connect, send_gesture
 
 MIN_DETECTION_CONFIDENCE = 0.4
 MIN_PRESENCE_CONFIDENCE = 0.4
@@ -20,7 +19,7 @@ mp_drawing = mp.solutions.drawing_utils
 BOX_MARGIN = 24
 
 DEBUG = False
-FRAMERATE = None
+FRAMERATE = 20
 
 FLIP_CAMERA = False
 
@@ -29,24 +28,27 @@ MODEL_PATH = f"./models/{MODEL_NAME}/{MODEL_NAME}.keras"
 
 MP_MODEL_COMPLEXITY = 0
 
-SWIPE_SENSITIVITY = {"x": 0.1, "y": 0.2}
+SWIPE_SENSITIVITY = {"x": 0.1, "y": 0.1}
 
 # hand = [0, 1] if HAND_CONTROL == "right_hand" else [1, 0]
 
-uri = "ws://localhost:8000/ws/swipes"
+WEBSOCKET_URI = "ws://localhost:8000/ws/swipes"
 
-capture = cv2.VideoCapture(1)
+capture = cv2.VideoCapture(0)
 
 # RESOLUTION = (capture.get(cv2.CAP_PROP_FRAME_WIDTH), capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-RESIZE_TO = (1000, 1000)  # (800, 800)
-RESOLUTION = (1000, 1000)  # (800, 800)  # (1280, 720)
+RESIZE_TO = (800, 1000)  # (800, 800)
+RESOLUTION = (400, 500)  # (800, 800)  # (1280, 720)
 
 
 def handle_frame():
+    """
+    Function that gets frame from camera and preprocess it (resize, rescale, flip)
+    :return: The preprocessed frame
+    """
     frame = read_frame(capture, FRAMERATE)
-    if frame.any():
-        frame = frame_preprocessing(frame, RESIZE_TO, RESOLUTION, FLIP_CAMERA)
+    frame = frame_preprocessing(frame, RESIZE_TO, RESOLUTION, FLIP_CAMERA)
 
     return frame
 
@@ -64,48 +66,48 @@ async def main():
                                          swipe_sensitivity=SWIPE_SENSITIVITY)
 
         while True:
+            websocket = await connect(WEBSOCKET_URI)
             try:
-                async with websockets.connect(uri) as websocket:
-                    while True:
-                        frame = handle_frame()
+                while True:
+                    frame = handle_frame()
 
-                        gesture_handler.handle_frame(frame)
-                        listening_hand = gesture_handler.get_listening_hand(frame)
+                    gesture_handler.handle_frame(frame)
+                    listening_hand = gesture_handler.get_listening_hand(frame)
+
+                    payload = {
+                        "hand": None,
+                        "coordinates": gesture_handler.coordinates,
+                        "gesture": "no_gesture",
+                        "deltas": {"x": 0, "y": 0},
+                        "action": None,
+                    }
+
+                    if listening_hand:
+                        action = gesture_handler.listen(frame, listening_hand)
+
+                        print(action)
 
                         payload = {
-                            "hand": None,
+                            "hand": listening_hand,
                             "coordinates": gesture_handler.coordinates,
-                            "gesture": "no_gesture",
-                            "deltas": {"x": 0, "y": 0},
-                            "action": None,
+                            "gesture": gesture_handler.current_gesture,
+                            "deltas": gesture_handler.swipe_handler.deltas,
+                            "action": action,
                         }
 
-                        if listening_hand:
-                            action = gesture_handler.listen(frame, listening_hand)
+                    await send_gesture(websocket, payload)
+                    frame = flip_frame(frame)
+                    show_frame(frame, "hand gesture recognition")
 
-                            payload = {
-                                "hand": listening_hand,
-                                "coordinates": gesture_handler.coordinates,
-                                "gesture": gesture_handler.current_gesture,
-                                "deltas": 0,  # gesture_handler.deltas,
-                                "action": action,
-                            }
+                    if get_close_event():
+                        print("Stop")
+                        break
 
-                        await send_gesture(websocket, payload)
-                        # frame = flip_frame(frame)
-                        # Display swipe on frame
-                        show_frame(frame, "hand gesture recognition")
-
-                        if get_close_event():
-                            break
-
-            except ConnectionClosed:
+            except websockets.ConnectionClosed:
                 print("Connection lost. Reconnecting...")
-                await asyncio.sleep(2)
                 continue
 
-            finally:
-                close_camera(capture)
+    close_camera(capture)
 
 
 asyncio.run(main())

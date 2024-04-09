@@ -8,6 +8,13 @@ def get_landmarks(frame, holistics):
     :param holistics:
     :return: landmarks dict
     """
+    if frame is None:
+        return {
+            "face": None,
+            "left_hand": None,
+            "right_hand": None,
+        }
+
     frame.flags.writeable = False
     results = holistics.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
     frame.flags.writeable = True

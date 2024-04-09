@@ -104,7 +104,8 @@ class SwipeHandler:
 
         # If locked coords are not set, return "none"
         if self.locked_control_coords[0] == (0, 0) or self.locked_control_coords[1] == (0, 0):
-            return "none"
+            self.current_swipe = "none"
+            return self.current_swipe
 
         # Update deltas
 
@@ -131,4 +132,6 @@ class SwipeHandler:
         elif deltaY > self.delta_thresholds["y"]:
             vertical_swipe_direction = -1
 
-        return swipe_directions.get((vertical_swipe_direction, horizontal_swipe_direction), "none")
+        self.current_swipe = swipe_directions.get((vertical_swipe_direction, horizontal_swipe_direction), "none")
+
+        return self.current_swipe
