@@ -85,8 +85,6 @@ async def main():
                     if listening_hand:
                         action = gesture_handler.listen(frame, listening_hand)
 
-                        print(action)
-
                         payload = {
                             "hand": listening_hand,
                             "coordinates": gesture_handler.coordinates,
