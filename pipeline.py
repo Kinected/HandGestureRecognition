@@ -19,7 +19,7 @@ mp_drawing = mp.solutions.drawing_utils
 BOX_MARGIN = 24
 
 DEBUG = False
-FRAMERATE = 20
+FRAMERATE = 24
 
 FLIP_CAMERA = False
 
@@ -28,7 +28,7 @@ MODEL_PATH = f"./models/{MODEL_NAME}/{MODEL_NAME}.keras"
 
 MP_MODEL_COMPLEXITY = 0
 
-SWIPE_SENSITIVITY = {"x": 0.1, "y": 0.1}
+SWIPE_SENSITIVITY = {"x": 0.05, "y": 0.05}
 
 # hand = [0, 1] if HAND_CONTROL == "right_hand" else [1, 0]
 
@@ -38,8 +38,8 @@ capture = cv2.VideoCapture(0)
 
 # RESOLUTION = (capture.get(cv2.CAP_PROP_FRAME_WIDTH), capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-RESIZE_TO = (800, 1000)  # (800, 800)
-RESOLUTION = (400, 500)  # (800, 800)  # (1280, 720)
+RESIZE_TO = (1000, 1000)  # (800, 800)
+RESOLUTION = (360, 360)  # (800, 800)  # (1280, 720)
 
 
 def handle_frame():
