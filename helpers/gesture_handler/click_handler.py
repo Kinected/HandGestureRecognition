@@ -21,6 +21,14 @@ class ClickHandler:
     current_gesture = None
     previous_gesture = None
 
+    def reset_state(self):
+        self.current_state = States.PENDING
+        self.previous_state = None
+        self.state_since = time.time()
+
+        self.current_gesture = None
+        self.previous_gesture = None
+
     def handle_step(self, current_gesture):
         """
         Function that handles the current step of a click

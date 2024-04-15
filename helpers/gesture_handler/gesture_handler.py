@@ -231,6 +231,9 @@ class GestureHandler:
         last_swipe = self.swipe_handler.current_swipe
         self.current_action = self.swipe_handler.get_current_swipe()
 
+        if self.current_action != "none":
+            self.click_handler.reset_state()
+
         is_clicking = self.click_handler.is_clicking()
 
         if is_clicking:

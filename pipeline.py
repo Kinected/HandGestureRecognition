@@ -19,7 +19,7 @@ mp_drawing = mp.solutions.drawing_utils
 BOX_MARGIN = 24
 
 DEBUG = False
-FRAMERATE = 24
+FRAMERATE = 48
 
 FLIP_CAMERA = False
 
@@ -28,7 +28,7 @@ MODEL_PATH = f"./models/{MODEL_NAME}/{MODEL_NAME}.keras"
 
 MP_MODEL_COMPLEXITY = 0
 
-SWIPE_SENSITIVITY = {"x": 0.05, "y": 0.05}
+SWIPE_SENSITIVITY = {"x": 0.075, "y": 0.1}
 
 # hand = [0, 1] if HAND_CONTROL == "right_hand" else [1, 0]
 
